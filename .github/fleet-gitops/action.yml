@@ -15,35 +15,40 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install fleetctl
+    - name: Restore fleetctl cache
+      uses: actions/cache/restore@v4
+      id: fleetctl-cache
+      with:
+        path: /tmp/fleet/build
+        key: fleetctl-my-key
+
+    - name: Clone fleet repository
+      if: steps.fleetctl-cache.outputs.cache-hit != 'true'
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      run: |
-        FLEET_URL="${FLEET_URL%/}"
-        FLEET_VERSION="$(curl "$FLEET_URL/api/v1/fleet/version" --header "Authorization: Bearer $FLEET_API_TOKEN" --fail --silent | jq --raw-output '.version')"
-        DEFAULT_FLEETCTL_VERSION="rc-minor-fleet-v4.83.0"
+      run: git clone --branch worktree-fleetctl-new --depth 1 https://github.com/fleetdm/fleet.git /tmp/fleet
 
-        # Decide which fleetctl version to install:
-        # If the server returns a clean version (e.g. 4.74.0), use that.
-        # If the server returns a snapshot (e.g. 0.0.0-SNAPSHOT-xxxxx) or is empty, pin to DEFAULT_FLEETCTL_VERSION.
-        if [[ -z "$FLEET_VERSION" ]]; then
-          INSTALL_VERSION="$DEFAULT_FLEETCTL_VERSION"
-        elif [[ "$FLEET_VERSION" == 0.0.0-SNAPSHOT* ]]; then
-          INSTALL_VERSION="$DEFAULT_FLEETCTL_VERSION"
-        elif [[ "$FLEET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          INSTALL_VERSION="$FLEET_VERSION"
-        else
-          # Strip anything after + (e.g. 4.81.0+foobar -> 4.81.0)
-          FLEET_VERSION="${FLEET_VERSION%%\+*}"
-          if [[ "$FLEET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            INSTALL_VERSION="$FLEET_VERSION"
-          else
-            INSTALL_VERSION="$DEFAULT_FLEETCTL_VERSION"
-          fi
-        fi
+    - name: Set up Go
+      if: steps.fleetctl-cache.outputs.cache-hit != 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: /tmp/fleet/go.mod
 
-        echo "Installing fleetctl v$INSTALL_VERSION..."
-        npm install -g "fleetctl@$INSTALL_VERSION" || npm install -g fleetctl@latest
+    - name: Build fleetctl
+      if: steps.fleetctl-cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: /tmp/fleet
+      run: make fleetctl
+
+    - name: Add fleetctl to PATH
+      shell: bash
+      run: echo "/tmp/fleet/build" >> "$GITHUB_PATH"
+
+    - name: Save fleetctl cache
+      if: steps.fleetctl-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: /tmp/fleet/build
+        key: fleetctl-my-key
 
     - name: Configure fleetctl
       shell: bash
