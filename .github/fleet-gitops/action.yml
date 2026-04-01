@@ -25,7 +25,7 @@ runs:
     - name: Clone fleet repository
       if: steps.fleetctl-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: git clone --branch worktree-fleetctl-new --depth 1 https://github.com/fleetdm/fleet.git /tmp/fleet
+      run: git clone --branch main --depth 1 https://github.com/fleetdm/fleet.git /tmp/fleet
 
     - name: Set up Go
       if: steps.fleetctl-cache.outputs.cache-hit != 'true'
