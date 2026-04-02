@@ -198,3 +198,6 @@ software:
 
   app_store_apps: # Apps to install via VPP from the macOS App Store, if any
     # …
+settings:
+  secrets:
+  - secret: '123456123456345w4543534545345345322143423342'
