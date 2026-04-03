@@ -201,3 +201,8 @@ software:
 settings:
   secrets:
   - secret: '123456123456345w4543534545345345322143423342'
+  webhook_settings:
+    failing_policies_webhook:
+      enable_failing_policies_webhook: true
+      destination_url: https://example.org/webhook_handler
+      host_batch_size: 0
